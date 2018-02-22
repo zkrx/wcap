@@ -26,10 +26,46 @@ def dump(obj):
 def mac_resolve(addr):
 	return mac_addresses.get(addr, addr)
 
+class Session:
+	def __init__(self, client, packet):
+		self.client = client
+		self.start = packet
+
+	def __str__(self):
+		return "client: " + str(self.client) + " start: " + \
+		str(datetime.fromtimestamp(self.start.time)) + " stop: " + \
+		str(datetime.fromtimestamp(self.stop.time))
+
+	def stop(self, packet):
+		self.stop = packet
+
+class Client:
+	def __init__(self, addr):
+		self.addr = addr
+		self.session = []
+
+	def __str__(self):
+		# FIXME: use mac_addresses {} above (AP)
+		return "addr: " + self.addr
+
+	def auth(self, packet):
+		if self.session:
+			self.deauth(packet)
+
+		self.session.append(Session(self, packet))
+
+	def deauth(self, packet):
+		# FIXME: implement latest packet seen and use it instead
+		self.session[-1].stop(packet)
+		print("Session terminated: " + str(self.session[-1]))
+
 print("looking for management frames ...")
 print("")
 
 start = time.time()
+
+clients = []
+addresses = []
 
 for file_var in sorted(os.listdir(os.getcwd())):
 	filename = os.fsdecode(file_var)
@@ -56,12 +92,27 @@ for file_var in sorted(os.listdir(os.getcwd())):
 
 				elif packet.haslayer(EAPOL):
 					frame_type = "EAPOL   "
+					addr = packet[Dot11].addr1
+
+					# FIXME: check if all EAPOL packets were received (no loss)
+					if packet[EAPOL].len == 175: # Msg #3 has always this length
+						if not addr in addresses:
+							client = Client(addr)
+							addresses.append(addr)
+							clients.append(client)
+
+						else:
+							client = clients[addresses.index(addr)]
+							print("FOUND: " + str(client))
+
+						client.auth(packet)
 
 				elif packet.haslayer(Dot11Auth):
 					frame_type = "Auth    "
 
 				elif packet.haslayer(Dot11Deauth):
 					frame_type = "Deauth  "
+					# FIXME: call deauth()
 
 				elif packet.haslayer(Dot11Disas):
 					frame_type = "Disass  "
