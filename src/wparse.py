@@ -49,7 +49,7 @@ class Client:
 		return "addr: " + self.addr
 
 	def auth(self, packet):
-		if self.session:
+		if self.session: # FIXME: isactive() (Deauth frame)
 			self.deauth(packet)
 
 		self.session.append(Session(self, packet))
@@ -95,7 +95,7 @@ for file_var in sorted(os.listdir(os.getcwd())):
 					addr = packet[Dot11].addr1
 
 					# FIXME: check if all EAPOL packets were received (no loss)
-					if packet[EAPOL].len == 175: # Msg #3 has always this length
+					if packet[EAPOL].len == 175: # Msg #3 always has this length
 						if not addr in addresses:
 							client = Client(addr)
 							addresses.append(addr)
