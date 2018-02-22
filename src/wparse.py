@@ -5,7 +5,7 @@ import sys
 import time
 import datetime
 
-sys.path.append('/home/xrn/Data/bordel/eap/scapy')
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../scapy')
 
 from subprocess import run
 from scapy.all import *
