@@ -26,6 +26,23 @@ def dump(obj):
 def mac_resolve(addr):
 	return mac_addresses.get(addr, addr)
 
+def addr_to_client(addr):
+	addr_to_client.clients = []
+	addr_to_client.addresses = []
+
+	if not addr in addr_to_client.addresses:
+		client = Client(addr)
+		addr_to_client.addresses.append(addr)
+		addr_to_client.clients.append(client)
+		print("NEW: " + str(client))
+
+	else:
+		client = clients[addr_to_client.addresses.index(addr)]
+		print("FOUND: " + str(client))
+
+	return client
+
+
 class Session:
 	def __init__(self, client, packet):
 		self.client = client
@@ -64,9 +81,6 @@ print("")
 
 start = time.time()
 
-clients = []
-addresses = []
-
 for file_var in sorted(os.listdir(os.getcwd())):
 	filename = os.fsdecode(file_var)
 
@@ -96,15 +110,7 @@ for file_var in sorted(os.listdir(os.getcwd())):
 
 					# FIXME: check if all EAPOL packets were received (no loss)
 					if packet[EAPOL].len == 175: # Msg #3 always has this length
-						if not addr in addresses:
-							client = Client(addr)
-							addresses.append(addr)
-							clients.append(client)
-
-						else:
-							client = clients[addresses.index(addr)]
-							print("FOUND: " + str(client))
-
+						client = addr_to_client(addr)
 						client.auth(packet)
 
 				elif packet.haslayer(Dot11Auth):
