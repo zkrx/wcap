@@ -70,6 +70,7 @@ class Client:
 			self.deauth(packet)
 
 		self.session.append(Session(self, packet))
+		print("Session started: " + str(self.session[-1]))
 
 	def deauth(self, packet):
 		# FIXME: implement latest packet seen and use it instead
@@ -118,7 +119,9 @@ for file_var in sorted(os.listdir(os.getcwd())):
 
 				elif packet.haslayer(Dot11Deauth):
 					frame_type = "Deauth  "
-					# FIXME: call deauth()
+
+					client = addr_to_client(addr)
+					client.deauth(packet)
 
 				elif packet.haslayer(Dot11Disas):
 					frame_type = "Disass  "
