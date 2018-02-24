@@ -47,6 +47,7 @@ class Session:
 	def __init__(self, client, packet):
 		self.client = client
 		self.start = packet
+		self.active = true
 
 	def __str__(self):
 		return "client: " + str(self.client) + " start: " + \
@@ -55,6 +56,7 @@ class Session:
 
 	def stop(self, packet):
 		self.stop = packet
+		self.active = false
 
 class Client:
 	def __init__(self, addr):
@@ -66,7 +68,7 @@ class Client:
 		return "addr: " + self.addr
 
 	def auth(self, packet):
-		if self.session: # FIXME: isactive() (Deauth frame)
+		if self.session and self.session[-1].active:
 			self.deauth(packet)
 
 		self.session.append(Session(self, packet))
