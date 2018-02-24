@@ -69,13 +69,12 @@ class Client:
 
 	def auth(self, packet):
 		if self.session and self.session[-1].active:
-			self.deauth(packet)
+			self.deauth(self.latest_seen)
 
 		self.session.append(Session(self, packet))
 		print("Session started: " + str(self.session[-1]))
 
 	def deauth(self, packet):
-		# FIXME: implement latest packet seen and use it instead
 		self.session[-1].stop(packet)
 		print("Session terminated: " + str(self.session[-1]))
 
@@ -95,6 +94,10 @@ for file_var in sorted(os.listdir(os.getcwd())):
 			print("--------------------------------------------------------------")
 
 			for index, packet in enumerate(pcap_reader):
+				addr = packet[Dot11].addr1
+				client = addr_to_client(addr)
+				frame_type = None
+
 				if packet.haslayer(Dot11AssoReq):
 					frame_type = "AssReq  "
 
@@ -109,11 +112,9 @@ for file_var in sorted(os.listdir(os.getcwd())):
 
 				elif packet.haslayer(EAPOL):
 					frame_type = "EAPOL   "
-					addr = packet[Dot11].addr1
 
 					# FIXME: check if all EAPOL packets were received (no loss)
 					if packet[EAPOL].len == 175: # Msg #3 always has this length
-						client = addr_to_client(addr)
 						client.auth(packet)
 
 				elif packet.haslayer(Dot11Auth):
@@ -122,21 +123,20 @@ for file_var in sorted(os.listdir(os.getcwd())):
 				elif packet.haslayer(Dot11Deauth):
 					frame_type = "Deauth  "
 
-					client = addr_to_client(addr)
 					client.deauth(packet)
 
 				elif packet.haslayer(Dot11Disas):
 					frame_type = "Disass  "
 
-				else:
-					continue
+				if frame_type is not None:
+					print("[" + str(datetime.fromtimestamp(packet.time).strftime("%Y-%m-%d %H:%M:%S")) + "] ", end='', flush=True)
+					print("[" + str(index) + "] [" + frame_type + "] ", end='', flush=True)
+					print("addr1: " + mac_resolve(packet[Dot11].addr1) + " ", end='', flush=True)
+					print("addr2: " + mac_resolve(packet[Dot11].addr2) + " ", end='', flush=True)
+					print("addr3: " + mac_resolve(packet[Dot11].addr3) + " ", end='', flush=True)
+					print("")
 
-				print("[" + str(datetime.fromtimestamp(packet.time).strftime("%Y-%m-%d %H:%M:%S")) + "] ", end='', flush=True)
-				print("[" + str(index) + "] [" + frame_type + "] ", end='', flush=True)
-				print("addr1: " + mac_resolve(packet[Dot11].addr1) + " ", end='', flush=True)
-				print("addr2: " + mac_resolve(packet[Dot11].addr2) + " ", end='', flush=True)
-				print("addr3: " + mac_resolve(packet[Dot11].addr3) + " ", end='', flush=True)
-				print("")
+				client.latest_seen = packet
 
 			print("")
 
