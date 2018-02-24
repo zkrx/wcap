@@ -50,8 +50,8 @@ class Session:
 
 	def __str__(self):
 		return "client: " + str(self.client) + " start: " + \
-		str(datetime.fromtimestamp(self.start.time)) + " stop: " + \
-		str(datetime.fromtimestamp(self.stop.time))
+		str(datetime.fromtimestamp(self.start.time)) + \
+		("stop : " + str(datetime.fromtimestamp(self.stop.time)) if isinstance(self.stop, Packet) else "")
 
 	def stop(self, packet):
 		self.stop = packet
