@@ -18,6 +18,9 @@ mac_addresses = {
 	sys.argv[1] : "AP               "
 }
 
+clients = []
+addresses = []
+
 def dump(obj):
 	for attr in dir(obj):
 		if hasattr( obj, attr ):
@@ -27,18 +30,14 @@ def mac_resolve(addr):
 	return mac_addresses.get(addr, addr)
 
 def addr_to_client(addr):
-	addr_to_client.clients = []
-	addr_to_client.addresses = []
-
-	if not addr in addr_to_client.addresses:
+	if not addr in addresses:
 		client = Client(addr)
-		addr_to_client.addresses.append(addr)
-		addr_to_client.clients.append(client)
+		addresses.append(addr)
+		clients.append(client)
 		print("NEW: " + str(client))
 
 	else:
-		client = clients[addr_to_client.addresses.index(addr)]
-		print("FOUND: " + str(client))
+		client = clients[addresses.index(addr)]
 
 	return client
 
