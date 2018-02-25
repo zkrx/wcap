@@ -14,8 +14,10 @@ if len(sys.argv) < 3:
 	print("usage: " + sys.argv[0] + " AP_MAC FILE_PREFIX")
 	sys.exit()
 
+AP_MAC = sys.argv[1]
+
 mac_addresses = {
-	sys.argv[1] : "AP               "
+	AP_MAC : "AP               "
 }
 
 clients = []
@@ -49,17 +51,20 @@ class Session:
 	def __init__(self, client, packet):
 		self.client = client
 		self.start = packet
+		self.end = None
 		self.active = True
+		print("Session started: " + str(self))
 
 	def __str__(self):
 		return "client: " + str(self.client) + " start: " + \
 		str(datetime.fromtimestamp(self.start.time)) + \
-		(" stop : " + str(datetime.fromtimestamp(self.stop.time)) if isinstance(self.stop, Packet) else "")
+		(" end: " + str(datetime.fromtimestamp(self.end.time)) if isinstance(self.end, Packet) else "")
 
 	def stop(self, packet):
 		if self.active:
-			self.stop = packet
+			self.end = packet
 			self.active = False
+			print("Session terminated: " + str(self))
 
 class Client:
 	def __init__(self, addr):
@@ -71,16 +76,14 @@ class Client:
 		return "addr: " + self.addr
 
 	def auth(self, packet):
-		if self.session and self.session[-1].active:
+		if self.session:
 			self.deauth(self.latest_seen)
 
 		self.session.append(Session(self, packet))
-		print("Session started: " + str(self.session[-1]))
 
 	def deauth(self, packet):
 		if self.session:
 			self.session[-1].stop(packet)
-			print("Session terminated: " + str(self.session[-1]))
 
 print("looking for management frames ...")
 print("")
@@ -132,7 +135,11 @@ for file_var in sorted(os.listdir(os.getcwd())):
 				elif packet.haslayer(Dot11Deauth):
 					frame_type = "Deauth  "
 
-					client_dst.deauth(packet)
+					# Either side can send a Deauth frame
+					if addr_src != AP_MAC:
+						client_src.deauth(packet)
+					else:
+						client_dst.deauth(packet)
 
 				elif packet.haslayer(Dot11Disas):
 					frame_type = "Disass  "
