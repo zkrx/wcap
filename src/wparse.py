@@ -97,6 +97,10 @@ for file_var in sorted(os.listdir(os.getcwd())):
 		with PcapReader(filename) as pcap_reader:
 			packet = pcap_reader.read_packet()
 
+			# File is empty
+			if not packet:
+				continue
+
 			print(filename + " starts at " + str(datetime.fromtimestamp(packet.time)))
 			print("--------------------------------------------------------------")
 
@@ -152,6 +156,7 @@ for file_var in sorted(os.listdir(os.getcwd())):
 					print("addr3: " + mac_resolve(packet[Dot11].addr3) + " ", end='', flush=True)
 					print("")
 
+				# FIXME: Management frames should not count as latest_seen
 				if client_src:
 					client_src.latest_seen = packet
 				if client_dst:
