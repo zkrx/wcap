@@ -46,7 +46,7 @@ class Session:
 	def __init__(self, client, packet):
 		self.client = client
 		self.start = packet
-		self.active = true
+		self.active = True
 
 	def __str__(self):
 		return "client: " + str(self.client) + " start: " + \
@@ -55,7 +55,7 @@ class Session:
 
 	def stop(self, packet):
 		self.stop = packet
-		self.active = false
+		self.active = False
 
 class Client:
 	def __init__(self, addr):
