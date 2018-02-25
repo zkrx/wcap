@@ -30,6 +30,9 @@ def mac_resolve(addr):
 	return mac_addresses.get(addr, addr)
 
 def addr_to_client(addr):
+	if not addr:
+		return None
+
 	if not addr in addresses:
 		client = Client(addr)
 		addresses.append(addr)
@@ -51,7 +54,7 @@ class Session:
 	def __str__(self):
 		return "client: " + str(self.client) + " start: " + \
 		str(datetime.fromtimestamp(self.start.time)) + \
-		("stop : " + str(datetime.fromtimestamp(self.stop.time)) if isinstance(self.stop, Packet) else "")
+		(" stop : " + str(datetime.fromtimestamp(self.stop.time)) if isinstance(self.stop, Packet) else "")
 
 	def stop(self, packet):
 		if self.active:
@@ -75,8 +78,9 @@ class Client:
 		print("Session started: " + str(self.session[-1]))
 
 	def deauth(self, packet):
-		self.session[-1].stop(packet)
-		print("Session terminated: " + str(self.session[-1]))
+		if self.session:
+			self.session[-1].stop(packet)
+			print("Session terminated: " + str(self.session[-1]))
 
 print("looking for management frames ...")
 print("")
@@ -94,8 +98,12 @@ for file_var in sorted(os.listdir(os.getcwd())):
 			print("--------------------------------------------------------------")
 
 			for index, packet in enumerate(pcap_reader):
-				addr = packet[Dot11].addr1
-				client = addr_to_client(addr)
+				addr_src = packet[Dot11].addr1
+				client_src = addr_to_client(addr_src)
+
+				addr_dst = packet[Dot11].addr2
+				client_dst = addr_to_client(addr_dst)
+
 				frame_type = None
 
 				if packet.haslayer(Dot11AssoReq):
@@ -114,8 +122,9 @@ for file_var in sorted(os.listdir(os.getcwd())):
 					frame_type = "EAPOL   "
 
 					# FIXME: check if all EAPOL packets were received (no loss)
+					# FIXME: display msg # (1 to 4)
 					if packet[EAPOL].len == 175: # Msg #3 always has this length
-						client.auth(packet)
+						client_src.auth(packet)
 
 				elif packet.haslayer(Dot11Auth):
 					frame_type = "Auth    "
@@ -123,7 +132,7 @@ for file_var in sorted(os.listdir(os.getcwd())):
 				elif packet.haslayer(Dot11Deauth):
 					frame_type = "Deauth  "
 
-					client.deauth(packet)
+					client_dst.deauth(packet)
 
 				elif packet.haslayer(Dot11Disas):
 					frame_type = "Disass  "
@@ -136,7 +145,10 @@ for file_var in sorted(os.listdir(os.getcwd())):
 					print("addr3: " + mac_resolve(packet[Dot11].addr3) + " ", end='', flush=True)
 					print("")
 
-				client.latest_seen = packet
+				if client_src:
+					client_src.latest_seen = packet
+				if client_dst:
+					client_dst.latest_seen = packet
 
 			print("")
 
