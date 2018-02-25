@@ -54,8 +54,9 @@ class Session:
 		("stop : " + str(datetime.fromtimestamp(self.stop.time)) if isinstance(self.stop, Packet) else "")
 
 	def stop(self, packet):
-		self.stop = packet
-		self.active = False
+		if self.active:
+			self.stop = packet
+			self.active = False
 
 class Client:
 	def __init__(self, addr):
