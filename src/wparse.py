@@ -70,6 +70,7 @@ class Client:
 	def __init__(self, addr):
 		self.addr = addr
 		self.session = []
+		# FIXME: last case with EAPOL spam does not work
 		self.latest_seen = None
 		self.latest_lock = True
 
