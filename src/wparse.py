@@ -70,6 +70,8 @@ class Client:
 	def __init__(self, addr):
 		self.addr = addr
 		self.session = []
+		self.latest_seen = None
+		self.latest_lock = True
 
 	def __str__(self):
 		# FIXME: use mac_addresses {} above (AP)
@@ -77,9 +79,14 @@ class Client:
 
 	def auth(self, packet):
 		if self.session:
-			self.deauth(self.latest_seen)
+			if self.latest_seen is not None:
+				self.deauth(self.latest_seen)
+
+			else:
+				self.deauth(packet)
 
 		self.session.append(Session(self, packet))
+		self.latest_lock = False
 
 	def deauth(self, packet):
 		if self.session:
@@ -136,17 +143,32 @@ for file_var in sorted(os.listdir(os.getcwd())):
 				elif packet.haslayer(Dot11Auth):
 					frame_type = "Auth    "
 
+					if client_src:
+						client_src.latest_lock = True
+
+					if client_dst:
+						client_dst.latest_lock = True
+
 				elif packet.haslayer(Dot11Deauth):
 					frame_type = "Deauth  "
 
 					# Either side can send a Deauth frame
 					if addr_src != AP_MAC:
 						client_src.deauth(packet)
+
 					else:
 						client_dst.deauth(packet)
 
 				elif packet.haslayer(Dot11Disas):
 					frame_type = "Disass  "
+
+				else:
+					# All the frames above should not count as latest_seen
+					if client_src and not client_src.latest_lock:
+						client_src.latest_seen = packet
+
+					if client_dst and not client_dst.latest_lock:
+						client_dst.latest_seen = packet
 
 				if frame_type is not None:
 					print("[" + str(datetime.fromtimestamp(packet.time).strftime("%Y-%m-%d %H:%M:%S")) + "] ", end='', flush=True)
@@ -156,11 +178,6 @@ for file_var in sorted(os.listdir(os.getcwd())):
 					print("addr3: " + mac_resolve(packet[Dot11].addr3) + " ", end='', flush=True)
 					print("")
 
-				# FIXME: Management frames should not count as latest_seen
-				if client_src:
-					client_src.latest_seen = packet
-				if client_dst:
-					client_dst.latest_seen = packet
 
 			print("")
 
