@@ -5,7 +5,7 @@ import sys
 import time
 import datetime
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../scapy')
+sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../scapy')
 
 from subprocess import run
 from scapy.all import *
