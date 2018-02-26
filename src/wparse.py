@@ -70,7 +70,6 @@ class Client:
 	def __init__(self, addr):
 		self.addr = addr
 		self.session = []
-		# FIXME: Move latest_seen / latest_lock to Session instead of Client
 		self.latest_seen = None
 		self.latest_lock = True
 
