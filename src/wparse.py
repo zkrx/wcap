@@ -134,12 +134,19 @@ for file_var in sorted(os.listdir(os.getcwd())):
 					frame_type = "ReassRsp"
 
 				elif packet.haslayer(EAPOL):
-					frame_type = "EAPOL   "
+					if packet[Raw].load[1] == 0x00 and packet[Raw].load[2] == 0x8a:
+						frame_type = "EAPOL #1"
 
-					# FIXME: check if all EAPOL packets were received (no loss)
-					# FIXME: display msg # (1 to 4)
-					if packet[EAPOL].len == 175: # Msg #3 always has this length
+					if packet[Raw].load[1] == 0x01 and packet[Raw].load[2] == 0x0a:
+						frame_type = "EAPOL #2"
+
+					if packet[Raw].load[1] == 0x13 and packet[Raw].load[2] == 0xca:
+						frame_type = "EAPOL #3"
+
+					if packet[Raw].load[1] == 0x03 and packet[Raw].load[2] == 0x0a:
+						frame_type = "EAPOL #4"
 						client_src.auth(packet)
+						# FIXME: check if all EAPOL packets were received (no loss)
 
 				elif packet.haslayer(Dot11Auth):
 					frame_type = "Auth    "
