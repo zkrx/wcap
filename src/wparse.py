@@ -15,6 +15,7 @@ if len(sys.argv) < 3:
 	sys.exit()
 
 AP_MAC = sys.argv[1]
+FILENAME = "wcap"
 
 mac_addresses = {
 	AP_MAC : "AP               "
@@ -48,11 +49,15 @@ def addr_to_client(addr):
 
 
 class Session:
+	id = 0
+
 	def __init__(self, client, packet):
 		self.client = client
 		self.start = packet
 		self.end = None
 		self.active = True
+		self.writer = PcapWriter(FILENAME + "-" + self.client.addr.replace(":","") + "-" + str(Session.id) + ".pcap")
+		Session.id += 1
 		print("Session started: " + str(self))
 
 	def __str__(self):
@@ -64,7 +69,13 @@ class Session:
 		if self.active:
 			self.end = packet
 			self.active = False
+			self.writer.close()
+			# FIXME: delete pcap file if EAPOL not completed
 			print("Session terminated: " + str(self))
+
+	def add(self, packet):
+		if self.active:
+			self.writer.write(packet)
 
 class Client:
 	def __init__(self, addr):
@@ -92,6 +103,10 @@ class Client:
 	def deauth(self, packet):
 		if self.session:
 			self.session[-1].stop(packet)
+
+	def add(self, packet):
+		if self.session:
+			self.session[-1].add(packet)
 
 print("looking for management frames ...")
 print("")
@@ -142,10 +157,10 @@ for file_var in sorted(os.listdir(os.getcwd())):
 
 					if packet[Raw].load[1] == 0x13 and packet[Raw].load[2] == 0xca:
 						frame_type = "EAPOL #3"
+						client_src.auth(packet)
 
 					if packet[Raw].load[1] == 0x03 and packet[Raw].load[2] == 0x0a:
 						frame_type = "EAPOL #4"
-						client_src.auth(packet)
 						# FIXME: check if all EAPOL packets were received (no loss)
 
 				elif packet.haslayer(Dot11Auth):
@@ -177,6 +192,12 @@ for file_var in sorted(os.listdir(os.getcwd())):
 
 					if client_dst and not client_dst.latest_lock:
 						client_dst.latest_seen = packet
+
+				if client_src:
+					client_src.add(packet)
+
+				if client_dst:
+					client_dst.add(packet)
 
 				if frame_type is not None:
 					print("[" + str(datetime.fromtimestamp(packet.time).strftime("%Y-%m-%d %H:%M:%S")) + "] ", end='', flush=True)
