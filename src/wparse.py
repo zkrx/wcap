@@ -10,11 +10,13 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../scapy')
 from subprocess import run
 from scapy.all import *
 
-if len(sys.argv) < 3:
-	print("usage: " + sys.argv[0] + " AP_MAC FILE_PREFIX")
+if len(sys.argv) < 5:
+	print("usage: " + sys.argv[0] + " SSID AP_MAC PASSPHRASE FILE_PREFIX")
 	sys.exit()
 
-AP_MAC = sys.argv[1]
+SSID = sys.argv[1]
+AP_MAC = sys.argv[2]
+PASSPHRASE = sys.argv[3]
 FILENAME = "wcap"
 
 mac_addresses = {
@@ -49,6 +51,7 @@ def addr_to_client(addr):
 
 
 class Session:
+	# FIXME: id should increment per session per client
 	id = 0
 
 	def __init__(self, client, packet):
@@ -56,7 +59,8 @@ class Session:
 		self.start = packet
 		self.end = None
 		self.active = True
-		self.writer = PcapWriter(FILENAME + "-" + self.client.addr.replace(":","") + "-" + str(Session.id) + ".pcap")
+		self.filename = FILENAME + "-" + self.client.addr.replace(":","") + "-" + str(Session.id) + ".pcap"
+		self.writer = PcapWriter(self.filename)
 		Session.id += 1
 		print("Session started: " + str(self))
 
@@ -70,6 +74,7 @@ class Session:
 			self.end = packet
 			self.active = False
 			self.writer.close()
+			subprocess.run(["airdecap-ng", "-e", SSID, "-b", AP_MAC, "-p", PASSPHRASE, self.filename])
 			# FIXME: delete pcap file if EAPOL not completed
 			print("Session terminated: " + str(self))
 
@@ -116,7 +121,7 @@ start = time.time()
 for file_var in sorted(os.listdir(os.getcwd())):
 	filename = os.fsdecode(file_var)
 
-	if filename.startswith(sys.argv[2]):
+	if filename.startswith(sys.argv[4]):
 		with PcapReader(filename) as pcap_reader:
 			packet = pcap_reader.read_packet()
 
@@ -151,13 +156,13 @@ for file_var in sorted(os.listdir(os.getcwd())):
 				elif packet.haslayer(EAPOL):
 					if packet[Raw].load[1] == 0x00 and packet[Raw].load[2] == 0x8a:
 						frame_type = "EAPOL #1"
+						client_src.auth(packet)
 
 					if packet[Raw].load[1] == 0x01 and packet[Raw].load[2] == 0x0a:
 						frame_type = "EAPOL #2"
 
 					if packet[Raw].load[1] == 0x13 and packet[Raw].load[2] == 0xca:
 						frame_type = "EAPOL #3"
-						client_src.auth(packet)
 
 					if packet[Raw].load[1] == 0x03 and packet[Raw].load[2] == 0x0a:
 						frame_type = "EAPOL #4"
