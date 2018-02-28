@@ -51,17 +51,14 @@ def addr_to_client(addr):
 
 
 class Session:
-	# FIXME: id should increment per session per client
-	id = 0
-
 	def __init__(self, client, packet):
 		self.client = client
 		self.start = packet
 		self.end = None
 		self.active = True
-		self.filename = FILENAME + "-" + self.client.addr.replace(":","") + "-" + str(Session.id) + ".pcap"
+		self.filename = FILENAME + "-" + self.client.addr.replace(":","") + "-" + str(client.session_id) + ".pcap"
 		self.writer = PcapWriter(self.filename)
-		Session.id += 1
+		client.session_id += 1
 		print("Session started: " + str(self))
 
 	def __str__(self):
@@ -74,6 +71,7 @@ class Session:
 			self.end = packet
 			self.active = False
 			self.writer.close()
+			print("### Decrypting " + self.filename + ":")
 			subprocess.run(["airdecap-ng", "-e", SSID, "-b", AP_MAC, "-p", PASSPHRASE, self.filename])
 			# FIXME: delete pcap file if EAPOL not completed
 			print("Session terminated: " + str(self))
@@ -83,6 +81,8 @@ class Session:
 			self.writer.write(packet)
 
 class Client:
+	session_id = 0
+
 	def __init__(self, addr):
 		self.addr = addr
 		self.session = []
